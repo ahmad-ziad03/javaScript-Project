@@ -40,24 +40,24 @@ function logout() {
  * Blocks the page unless a user with the required role is logged in.
  * Returns the user object so the page can use it straight away.
  */
-function requireRole(role) {
-    const user = getCurrentUser();
+// function requireRole(role) {
+//     const user = getCurrentUser();
 
-    if (!user) {
-        window.location.replace("login.html");
-        return null;
-    }
-    if (user.role !== role) {
-        // Logged in, but wrong dashboard — send them to their own.
-        window.location.replace(
-            user.role === "teacher"
-                ? "teacher-dashboard.html"
-                : "student-dashboard.html",
-        );
-        return null;
-    }
-    return user;
-}
+//     if (!user) {
+//         window.location.replace("login.html");
+//         return null;
+//     }
+//     if (user.role !== role) {
+//         // Logged in, but wrong dashboard — send them to their own.
+//         window.location.replace(
+//             user.role === "teacher"
+//                 ? "teacher-dashboard.html"
+//                 : "student-dashboard.html",
+//         );
+//         return null;
+//     }
+//     return user;
+// }
 
 /*   Domain helpers   */
 
