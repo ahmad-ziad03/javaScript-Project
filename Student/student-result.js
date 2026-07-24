@@ -38,7 +38,7 @@ window.onload = function () {
  * student could read someone else's score by editing the address bar.
  */
 function findResult(id, student) {
-    const found = readStore(KEYS.RESULTS).find((item) => item.id === id);
+    const found = readResults().find((item) => item.id === id);
 
     if (!found || found.studentId !== student.id) {
         window.location.replace("student-dashboard.html");

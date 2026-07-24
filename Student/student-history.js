@@ -27,7 +27,7 @@ window.onload = function () {
     const student = requireRole("student");
     if (!student) return;
 
-    exams = readStore(KEYS.EXAMS);
+    exams = readExams();
 
     // Newest first — the exam they just sat is the one they want.
     const results = getResultsFor(student.id).sort(function (a, b) {

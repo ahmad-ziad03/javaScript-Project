@@ -1,4 +1,4 @@
- /* Design tokens  */
+/* Design tokens  */
 :root {
   /* brand */
   --c-primary:      #00537A;
@@ -15,6 +15,7 @@
 
   --f-display: "Jersey 10", "Courier New", monospace;
   --f-sidebar: "Jersey 25", "Jersey 10", "Courier New", monospace;
+  --f-body:    "Alata", "Segoe UI", system-ui, sans-serif;
 
   /* scale */
   --r-sm: 8px;

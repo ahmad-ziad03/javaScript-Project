@@ -21,11 +21,9 @@ window.onload = function () {
     const result = findResult(id, student);
     if (!result) return;
 
-    const exam = readStore(KEYS.EXAMS).find(
-        (item) => item.id === result.examId,
-    );
+    const exam = readExams().find((item) => item.id === result.examId);
     if (!exam) {
-        window.location.replace("dashboard.html");
+        window.location.replace("student-dashboard.html");
         return;
     }
 
@@ -38,10 +36,10 @@ window.onload = function () {
 
 /** A result id in the URL is not proof of ownership. */
 function findResult(id, student) {
-    const found = readStore(KEYS.RESULTS).find((item) => item.id === id);
+    const found = readResults().find((item) => item.id === id);
 
     if (!found || found.studentId !== student.id) {
-        window.location.replace("dashboard.html");
+        window.location.replace("student-dashboard.html");
         return null;
     }
     return found;

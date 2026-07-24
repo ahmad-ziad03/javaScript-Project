@@ -1,5 +1,6 @@
 /*   Storage keys (the contract with the Teacher section)   */
 const KEYS = {
+    USERS: "users", // localStorage   -> [ user ]
     EXAMS: "exams", // localStorage   -> [ exam ]
     RESULTS: "results", // localStorage   -> [ result ]
     SESSION: "currentUser", // sessionStorage -> user object
@@ -33,44 +34,152 @@ function getCurrentUser() {
 
 function logout() {
     sessionStorage.removeItem(KEYS.SESSION);
-    window.location.href = "login.html";
+    window.location.href = "../public/Login.html";
 }
 
 /**
  * Blocks the page unless a user with the required role is logged in.
  * Returns the user object so the page can use it straight away.
  */
-// function requireRole(role) {
-//     const user = getCurrentUser();
+function requireRole(role) {
+    const user = getCurrentUser();
 
-//     if (!user) {
-//         window.location.replace("login.html");
-//         return null;
-//     }
-//     if (user.role !== role) {
-//         // Logged in, but wrong dashboard — send them to their own.
-//         window.location.replace(
-//             user.role === "teacher"
-//                 ? "teacher-dashboard.html"
-//                 : "student-dashboard.html",
-//         );
-//         return null;
-//     }
-//     return user;
-// }
+    if (!user) {
+        window.location.replace("../public/Login.html");
+        return null;
+    }
+    if (user.role !== role) {
+        // Logged in, but wrong dashboard — send them to their own.
+        window.location.replace(
+            user.role === "teacher"
+                ? "../Teacher/dashboard.html"
+                : "../Student/student-dashboard.html",
+        );
+        return null;
+    }
+    return user;
+}
+
+/*   Schema normalizers   */
+/* The seed data and the teacher builder use the older field names
+   (examId / questionText / correctAnswer / "MCQ"...), while the student pages
+   read id / text / correct / "mcq". These convert on read so both work. */
+
+function normalizeType(type) {
+    const t = String(type)
+        .toLowerCase()
+        .replace(/[\s_\/-]/g, "");
+    if (t === "mcq") return "mcq";
+    if (t === "truefalse") return "truefalse";
+    if (t === "multiple" || t === "checkbox") return "multiple";
+    if (t === "shortanswer" || t === "number" || t === "short") return "short";
+    return t;
+}
+
+/* Turns a teacher-typed answer into the value the grader expects:
+   an option index for mcq, a boolean for true/false, an array of
+   indexes for multiple, and the raw value for short answers. */
+function normalizeCorrect(type, correct, options) {
+    const answers = (Array.isArray(correct) ? correct : [correct])
+        .map((a) => String(a).trim())
+        .filter((a) => a !== "");
+
+    if (type === "truefalse") return answers[0].toLowerCase() === "true";
+    if (type === "short") return answers[0];
+    if (type === "multiple") {
+        return answers
+            .map((a) => options.findIndex((o) => String(o).trim() === a))
+            .filter((i) => i !== -1);
+    }
+    const index = options.findIndex((o) => String(o).trim() === answers[0]);
+    return index === -1 ? answers[0] : index;
+}
+
+function normalizeQuestion(question, index) {
+    const type = normalizeType(question.type);
+    const options = (question.options || []).map((o) => String(o).trim());
+
+    return {
+        id: question.id !== undefined ? question.id : index,
+        type: type,
+        text:
+            question.text !== undefined ? question.text : question.questionText,
+        options: options,
+        correct:
+            question.correct !== undefined
+                ? question.correct
+                : normalizeCorrect(type, question.correctAnswer, options),
+        points: question.points || 1,
+    };
+}
+
+function normalizeExam(exam, index) {
+    return {
+        id:
+            exam.id !== undefined
+                ? exam.id
+                : exam.examId !== undefined
+                  ? exam.examId
+                  : index,
+        title: exam.title,
+        dateTime:
+            exam.dateTime || `${exam.date || ""} ${exam.time || ""}`.trim(),
+        status: String(exam.status || "").toLowerCase(),
+        questions: (exam.questions || []).map(normalizeQuestion),
+    };
+}
+
+/* Old results store resultId/totalScore/status/studentAnswers/userAnswer. */
+function normalizeResult(result, index) {
+    const answers = (result.answers || result.studentAnswers || []).map(
+        (a) => ({
+            questionId: a.questionId,
+            answer: a.answer !== undefined ? a.answer : a.userAnswer,
+        }),
+    );
+
+    const total = result.total !== undefined ? result.total : result.totalScore;
+    const passed =
+        result.passed !== undefined
+            ? result.passed
+            : String(result.status).toLowerCase() === "pass";
+
+    return {
+        id:
+            result.id !== undefined
+                ? result.id
+                : result.resultId !== undefined
+                  ? result.resultId
+                  : index,
+        examId: result.examId,
+        studentId: result.studentId,
+        answers: answers,
+        score: result.score,
+        total: total,
+        passed: passed,
+        submittedAt: result.submittedAt || result.date,
+    };
+}
+
+/* Read exams / results already converted to the student-side shape. */
+function readExams() {
+    return readStore(KEYS.EXAMS).map(normalizeExam);
+}
+
+function readResults() {
+    return readStore(KEYS.RESULTS).map(normalizeResult);
+}
 
 /*   Domain helpers   */
 
 /** Active exams only  */
 function getActiveExams() {
-    return readStore(KEYS.EXAMS).filter((exam) => exam.status === "active");
+    return readExams().filter((exam) => exam.status === "active");
 }
 
 /** Every result belonging to one student. */
 function getResultsFor(studentId) {
-    return readStore(KEYS.RESULTS).filter(
-        (result) => result.studentId === studentId,
-    );
+    return readResults().filter((result) => result.studentId === studentId);
 }
 
 /** One attempt per exam  */
@@ -108,9 +217,6 @@ function renderExamCard(exam) {
       <article class="card exam-card">
         <h3 class="exam-card__title">${escapeHtml(exam.title)}</h3>
 
-        <p class="exam-card__meta">
-          <i class="bi bi-clock"></i> ${exam.duration} Mins
-        </p>
         <p class="exam-card__meta">
           <i class="bi bi-journal"></i> ${questionCount} Questions
         </p>

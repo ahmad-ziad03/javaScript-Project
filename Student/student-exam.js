@@ -46,7 +46,7 @@ window.onload = function () {
  */
 function findExamFromUrl() {
     const id = Number(new URLSearchParams(window.location.search).get("id"));
-    const found = readStore(KEYS.EXAMS).find((item) => item.id === id);
+    const found = readExams().find((item) => item.id === id);
 
     if (
         !found ||
@@ -328,7 +328,8 @@ function submitExam() {
 function nextResultId(results) {
     let highest = -1;
     results.forEach(function (result) {
-        if (result.id > highest) highest = result.id;
+        const id = result.id !== undefined ? result.id : result.resultId; // seeded results use resultId, not id
+        if (id > highest) highest = id;
     });
     return highest + 1;
 }
